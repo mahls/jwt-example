@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { jwtDecode } from "jwt-decode"; // Import jwt-decode library for decoding JWT tokens
 
 interface LoginPageProps {
   handleLogin: (username: string, password: string) => void;
 }
 
 interface HomePageProps {
-  token: string;
-  setToken: (token: string) => void;
+  username: string;
+  handleLogout: () => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ handleLogin }) => {
@@ -25,18 +26,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ handleLogin }) => {
   );
 };
 
-const HomePage: React.FC<HomePageProps> = ({ token, setToken }) => {
-
-  const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove token from localStorage
-    setToken(''); // Clear token state
-  };
-
+const HomePage: React.FC<HomePageProps> = ({ username, handleLogout }) => {
   return (
     <div>
       <h2>Home</h2>
-      <p>Welcome! You are logged in.</p>
-      <p>Token: {token}</p>
+      <p>Hello {username}!</p>
       <Link to="/" onClick={handleLogout}>Logout</Link>
     </div>
   );
@@ -44,12 +38,16 @@ const HomePage: React.FC<HomePageProps> = ({ token, setToken }) => {
 
 function App() {
   const [token, setToken] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
   const navigate = useNavigate(); // Create navigate function instance
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
+      console.log(storedToken)
+      const decoded = jwtDecode(storedToken); // Adjust the type here based on actual token structure
+      setUsername(decoded); // Adjust the property access here
     }
   }, []);
 
@@ -57,31 +55,34 @@ function App() {
     try {
       const response = await axios.post('http://localhost:5000/login', { username, password });
       const { token } = response.data;
-      localStorage.setItem('token', token); // Store token in localStorage
+      localStorage.setItem('token', token);
       setToken(token);
-      navigate('/home'); // Use navigate function to change route
+  
+      const decoded = jwtDecode(token);
+      setUsername(decoded.userName);
+      navigate('/home');
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Login failed:', error.response?.data.error);
-      } else {
-        console.error('Login failed:', error);
-      }
+      console.error("Login failed:", error);
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Remove token from localStorage
+    setToken(''); // Clear token state
+    setUsername(''); // Clear username state
+  };
+
   return (
-
-      <div>
-        <h1>JWT Demo</h1>
-        <Routes>
-          <Route path="/" element={<LoginPage handleLogin={handleLogin} />} />
-          <Route
-            path="/home"
-            element={token ? <HomePage token={token} setToken={setToken} /> : <Navigate to="/" replace />}
-          />
-        </Routes>
-      </div>
-
+    <div>
+      <h1>JWT Demo</h1>
+      <Routes>
+        <Route path="/" element={<LoginPage handleLogin={handleLogin} />} />
+        <Route
+          path="/home"
+          element={token ? <HomePage username={username} handleLogout={handleLogout} /> : <Navigate to="/" replace />}
+        />
+      </Routes>
+    </div>
   );
 }
 

@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Sample user data (for demonstration purposes)
 const users = [
-  { id: 1, username: '1', password: '1' }
+  { id: 1, username: 'matthew', password: '1' }
 ];
 
 // Login endpoint
@@ -23,7 +23,7 @@ app.post('/login', (req, res) => {
 
   if (user) {
     // Generate JWT token
-    const token = jwt.sign({ userId: user.id }, SECRET_KEY);
+    const token = jwt.sign({ userId: user.id, userName: user.username }, SECRET_KEY);
     res.json({ token });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
