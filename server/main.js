@@ -30,6 +30,30 @@ app.post('/login', (req, res) => {
   }
 });
 
+// Register endpoint
+app.post('/register', (req, res) => {
+  const { username, password } = req.body;
+
+  // Check if the user already exists
+  const existingUser = users.find(u => u.username === username);
+  if (existingUser) {
+    return res.status(409).json({ error: 'Username already exists' });
+  }
+
+  // Create new user (in a real application, you should hash the password)
+  const newUser = {
+    id: users.length + 1, // Simple ID assignment
+    username: username,
+    password: password
+  };
+
+  users.push(newUser);
+
+  // Optionally, directly log the user in by returning a token
+  const token = jwt.sign({ userId: newUser.id, userName: newUser.username }, SECRET_KEY);
+  res.status(201).json({ token });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

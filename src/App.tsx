@@ -1,86 +1,53 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { jwtDecode } from "jwt-decode"; // Import jwt-decode library for decoding JWT tokens
-
-interface LoginPageProps {
-  handleLogin: (username: string, password: string) => void;
-}
-
-interface HomePageProps {
-  username: string;
-  handleLogout: () => void;
-}
-
-const LoginPage: React.FC<LoginPageProps> = ({ handleLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  return (
-    <div>
-      <h2>Login</h2>
-      <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
-      <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-      <button onClick={() => handleLogin(username, password)}>Login</button>
-    </div>
-  );
-};
-
-const HomePage: React.FC<HomePageProps> = ({ username, handleLogout }) => {
-  return (
-    <div>
-      <h2>Home</h2>
-      <p>Hello {username}!</p>
-      <Link to="/" onClick={handleLogout}>Logout</Link>
-    </div>
-  );
-};
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
+import { login, decodeToken } from './services/AuthServices';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   const [token, setToken] = useState<string>('');
   const [username, setUsername] = useState<string>('');
-  const navigate = useNavigate(); // Create navigate function instance
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
-      console.log(storedToken)
-      const decoded = jwtDecode(storedToken); // Adjust the type here based on actual token structure
-      setUsername(decoded); // Adjust the property access here
+      const decoded = decodeToken(storedToken);
+      setUsername(decoded.userName);
     }
   }, []);
 
   const handleLogin = async (username: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:5000/login', { username, password });
-      const { token } = response.data;
+      const { token } = await login(username, password);
       localStorage.setItem('token', token);
       setToken(token);
-  
-      const decoded = jwtDecode(token);
+      const decoded = decodeToken(token);
       setUsername(decoded.userName);
       navigate('/home');
     } catch (error) {
       console.error("Login failed:", error);
+      navigate('/');
+      alert('invalid credentials');
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove token from localStorage
-    setToken(''); // Clear token state
-    setUsername(''); // Clear username state
+    localStorage.removeItem('token');
+    setToken('');
+    setUsername('');
+    navigate('/');
   };
 
   return (
     <div>
-      <h1>JWT Demo</h1>
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<LoginPage handleLogin={handleLogin} />} />
-        <Route
-          path="/home"
-          element={token ? <HomePage username={username} handleLogout={handleLogout} /> : <Navigate to="/" replace />}
-        />
+        <Route path="/home" element={token ? <HomePage username={username} handleLogout={handleLogout} /> : <Navigate to="/" replace />} />
       </Routes>
     </div>
   );
